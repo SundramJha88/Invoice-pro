@@ -5,6 +5,9 @@ import { PORT } from './src/config/index.js';
 import connectDb from './src/config/connectDb.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import cookieParser from 'cookie-parser';
+
+
 import authRoutes from './src/routes/auth.routes.js';
 import companyRoutes from './src/routes/company.routes.js';
 import invoiceRoutes from './src/routes/invoice.routes.js';
@@ -19,6 +22,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(morgan('dev'));
+app.use(cookieParser());
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'src', 'views'));
@@ -26,6 +30,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/auth', authRoutes);
 app.use('/company', companyRoutes);
 app.use('/invoice', invoiceRoutes);
+
+app.get('/dashboard', (req, res) => {
+    res.redirect('/invoice');
+});
 
 const port = PORT || 4040;
 app.listen(port, () => {

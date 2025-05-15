@@ -37,7 +37,7 @@ router.post('/login', async (req, res) => {
             return res.render('auth/login', { error: 'Invalid credentials' });
         }
 
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        const token = jwt.sign({ userId: user._id },JWT_SECRET, { expiresIn: '1d' });
         res.cookie('token', token, { httpOnly: true });
         res.redirect('/dashboard');
     } catch (error) {
@@ -49,6 +49,14 @@ router.post('/register', async (req, res) => {
     try {
         const { name, email, password, companyId } = req.body;
         
+        if (!name || !email || !password || !companyId) {
+            const companies = await Company.find().select('name');
+            return res.render('auth/register', { 
+                error: 'All fields are required',
+                companies
+            });
+        }
+
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             const companies = await Company.find().select('name');
@@ -72,9 +80,10 @@ router.post('/register', async (req, res) => {
         res.cookie('token', token, { httpOnly: true });
         res.redirect('/dashboard');
     } catch (error) {
+        console.error('Registration error:', error);
         const companies = await Company.find().select('name');
         res.render('auth/register', { 
-            error: 'Error creating account',
+            error: 'Error creating account: ' + error.message,
             companies
         });
     }
