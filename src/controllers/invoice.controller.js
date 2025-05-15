@@ -42,14 +42,31 @@ export const createInvoice = async (req, res) => {
             createdBy: req.user._id,
             status: 'draft'
         });
+        
+        // Validate products exist and update stock
+        for (const item of invoice.items) {
+            const product = await Product.findById(item.productId);
+            if (!product) {
+                throw new Error(`Product not found: ${item.productId}`);
+            }
+            if (product.inStock < item.quantity) {
+                throw new Error(`Insufficient stock for product: ${product.name}`);
+            }
+            // Update stock
+            product.inStock -= item.quantity;
+            await product.save();
+        }
+        
         await invoice.save();
         res.redirect('/invoice');
     } catch (error) {
         const companies = await Company.find().select('name');
+        const products = await Product.find({ companyId: req.body.companyId }).select('name price');
         res.render('invoice/add', { 
-            error: 'Error creating invoice',
+            error: error.message || 'Error creating invoice',
             invoice: req.body,
-            companies
+            companies,
+            products
         });
     }
 };

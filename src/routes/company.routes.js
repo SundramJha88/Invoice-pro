@@ -8,8 +8,11 @@ import {
     deleteCompany
 } from '../controllers/company.controller.js';
 
+import { auth, adminAuth } from '../middlewares/auth.middleware.js';
+
 const router = express.Router();
 
+router.use(auth);
 router.get('/', getAllCompanies);
 router.get('/add', getAddCompanyForm);
 router.post('/', createCompany);
