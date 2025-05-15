@@ -8,10 +8,6 @@ import { fileURLToPath } from 'url';
 import cookieParser from 'cookie-parser';
 
 
-import authRoutes from './src/routes/auth.routes.js';
-import companyRoutes from './src/routes/company.routes.js';
-import invoiceRoutes from './src/routes/invoice.routes.js';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -26,14 +22,19 @@ app.use(cookieParser());
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'src', 'views'));
+
+
+
+import authRoutes from './src/routes/auth.routes.js';
+import companyRoutes from './src/routes/company.routes.js';
+import invoiceRoutes from './src/routes/invoice.routes.js';
+import dashboardRoutes from './src/routes/dashboard.routes.js';
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/auth', authRoutes);
 app.use('/company', companyRoutes);
 app.use('/invoice', invoiceRoutes);
-
-app.get('/dashboard', (req, res) => {
-    res.redirect('/invoice');
-});
+app.use('/dashboard', dashboardRoutes);
 
 const port = PORT || 4040;
 app.listen(port, () => {
