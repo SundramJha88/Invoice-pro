@@ -29,12 +29,19 @@ import authRoutes from './src/routes/auth.routes.js';
 import companyRoutes from './src/routes/company.routes.js';
 import invoiceRoutes from './src/routes/invoice.routes.js';
 import dashboardRoutes from './src/routes/dashboard.routes.js';
+import productRoutes from './src/routes/product.routes.js';
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/auth', authRoutes);
 app.use('/company', companyRoutes);
 app.use('/invoice', invoiceRoutes);
 app.use('/dashboard', dashboardRoutes);
+app.use('/product', productRoutes);
+
+// Add root route handler
+app.get('/', (req, res) => {
+  res.redirect('/dashboard');
+});
 
 const port = PORT || 4040;
 app.listen(port, () => {
