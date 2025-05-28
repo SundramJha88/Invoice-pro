@@ -36,12 +36,14 @@ router.get('/add', (req, res) => {
 
 router.post('/', async (req, res) => {
     try {
+        req.body.isActive = req.body.isActive === 'on';
+        req.body.createdBy = req.user._id;
         const product = new Product(req.body);
         await product.save();
         res.redirect('/product');
     } catch (error) {
         res.render('product/add', { 
-            error: 'Error creating product',
+            error: `Error creating product ${error}`,
             product: req.body 
         });
     }
