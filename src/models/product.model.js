@@ -10,10 +10,6 @@ const productSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
-    sku: {
-        type: String,
-        trim: true
-    },
     category: {
         type: String,
         trim: true

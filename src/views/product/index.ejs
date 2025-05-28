@@ -26,7 +26,7 @@
                         <thead>
                             <tr>
                                 <th>Name</th>
-                                <th>SKU</th>
+                               
                                 <th>Price</th>
                                 <th>Tax Rate</th>
                                 <th>In Stock</th>
@@ -38,7 +38,7 @@
                             <% products.forEach(product => { %>
                                 <tr>
                                     <td><%= product.name %></td>
-                                    <td><%= product.sku %></td>
+                                   
                                     <td>₹<%= product.price.toFixed(2) %></td>
                                     <td><%= product.taxRate %>%</td>
                                     <td><%= product.inStock %></td>
