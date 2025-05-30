@@ -38,6 +38,7 @@ router.post('/', async (req, res) => {
     try {
         req.body.isActive = req.body.isActive === 'on';
         req.body.createdBy = req.user._id;
+        req.body.companyId = req.user.companyId;
         const product = new Product(req.body);
         await product.save();
         res.redirect('/product');

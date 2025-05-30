@@ -76,7 +76,7 @@ router.post('/register', async (req, res) => {
 
         await user.save();
         
-        const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1d' });
+        const token = jwt.sign({ userId: user._id, companyId: user.companyId }, JWT_SECRET, { expiresIn: '1d' });
         res.cookie('token', token, { httpOnly: true });
         res.redirect('/dashboard');
     } catch (error) {

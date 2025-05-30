@@ -44,6 +44,11 @@ const productSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    companyId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Company',
+        required: true
+    },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',

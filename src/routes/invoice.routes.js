@@ -6,9 +6,11 @@ import {
     getEditInvoiceForm,
     updateInvoice,
     deleteInvoice,
-    getInvoiceDetails
+    getInvoiceDetails,
+    getProductsByCompany
 } from '../controllers/invoice.controller.js';
 import { auth } from '../middlewares/auth.middleware.js';
+import Product from '../models/product.model.js';
 
 const router = express.Router();
 
@@ -20,15 +22,6 @@ router.get('/:id', getInvoiceDetails);
 router.get('/edit/:id', getEditInvoiceForm);
 router.post('/update/:id', updateInvoice);
 router.get('/delete/:id', deleteInvoice);
-router.get('/products/:companyId', async (req, res) => {
-    try {
-        const products = await Product.find({ 
-            companyId: req.params.companyId,
-            isActive: true 
-        }).select('name price taxRate');
-        res.json(products);
-    } catch (error) {
-        res.status(500).json({ error: 'Error fetching products' });
-    }
-});
+router.get('/products/:companyId', getProductsByCompany);
+
 export default router;

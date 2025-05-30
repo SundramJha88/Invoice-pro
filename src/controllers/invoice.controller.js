@@ -1,5 +1,6 @@
 import Invoice from '../models/invoice.model.js';
 import Company from '../models/company.model.js';
+import Product from '../models/product.model.js';
 
 export const getAllInvoices = async (req, res) => {
     try {
@@ -119,5 +120,15 @@ export const deleteInvoice = async (req, res) => {
         res.redirect('/invoice');
     } catch (error) {
         res.redirect('/invoice');
+    }
+};
+
+export const getProductsByCompany = async (req, res) => {
+    try {
+        const products = await Product.find({ companyId: req.params.companyId })
+            .select('name price taxRate inStock');
+        res.json(products);
+    } catch (error) {
+        res.status(500).json({ error: 'Error fetching products' });
     }
 };

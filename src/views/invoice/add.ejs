@@ -48,23 +48,77 @@
                             </div>
 
                             <div class="mb-3">
+                                <label for="clientDetails" class="form-label">Client Details</label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <input type="text" class="form-control" name="clientDetails[name]" placeholder="Client Name" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <input type="email" class="form-control" name="clientDetails[email]" placeholder="Client Email">
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <input type="text" class="form-control" name="clientDetails[phone]" placeholder="Client Phone">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <input type="text" class="form-control" name="clientDetails[gstin]" placeholder="GSTIN">
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-12">
+                                        <textarea class="form-control" name="clientDetails[address][street]" placeholder="Address" rows="2"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
                                 <label for="items" class="form-label">Items</label>
                                 <div id="itemsContainer">
                                     <div class="item-row mb-2">
                                         <div class="row">
-                                            <div class="col">
-                                                <input type="text" class="form-control" name="items[0][description]" placeholder="Description" required>
+                                            <div class="col-md-4">
+                                                <select class="form-select product-select" name="items[0][productId]" required>
+                                                    <option value="">Select Product</option>
+                                                </select>
                                             </div>
-                                            <div class="col">
-                                                <input type="number" class="form-control" name="items[0][quantity]" placeholder="Quantity" required>
+                                            <div class="col-md-2">
+                                                <input type="number" class="form-control quantity-input" name="items[0][quantity]" placeholder="Quantity" required min="1">
                                             </div>
-                                            <div class="col">
-                                                <input type="number" class="form-control" name="items[0][rate]" placeholder="Rate" required>
+                                            <div class="col-md-2">
+                                                <input type="number" class="form-control rate-input" name="items[0][rate]" placeholder="Rate" readonly>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <input type="number" class="form-control tax-input" name="items[0][tax]" placeholder="Tax %" readonly>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <input type="number" class="form-control amount-input" name="items[0][amount]" placeholder="Amount" readonly>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-1">
+                                            <div class="col-12">
+                                                <input type="text" class="form-control description-input" name="items[0][description]" placeholder="Description" required>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                                 <button type="button" class="btn btn-secondary mt-2" onclick="addItem()">Add Item</button>
+                            </div>
+                            <div class="mb-3">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Sub Total</label>
+                                        <input type="number" class="form-control" id="subTotal" name="subTotal" readonly>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Tax Amount</label>
+                                        <input type="number" class="form-control" id="taxAmount" name="taxAmount" readonly>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Total Amount</label>
+                                        <input type="number" class="form-control" id="totalAmount" name="totalAmount" readonly>
+                                    </div>
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label for="notes" class="form-label">Notes</label>
@@ -85,26 +139,128 @@
     <script>
         let itemCount = 1;
         
+        async function loadProducts(companyId) {
+            try {
+                const response = await fetch(`/invoice/products/${companyId}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch products');
+                }
+                const products = await response.json();
+                const productSelects = document.querySelectorAll('.product-select');
+                
+                productSelects.forEach(select => {
+                    select.innerHTML = '<option value="">Select Product</option>';
+                    products.forEach(product => {
+                        select.innerHTML += `<option value="${product._id}" 
+                            data-price="${product.price}" 
+                            data-tax="${product.taxRate}">
+                            ${product.name} (Stock: ${product.inStock})
+                        </option>`;
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading products:', error);
+                alert('Failed to load products. Please try again.');
+            }
+        }
+
+        document.getElementById('companyId').addEventListener('change', (e) => {
+            loadProducts(e.target.value);
+        });
+
+        function calculateAmount(row) {
+            const quantity = parseFloat(row.querySelector('.quantity-input').value) || 0;
+            const rate = parseFloat(row.querySelector('.rate-input').value) || 0;
+            const tax = parseFloat(row.querySelector('.tax-input').value) || 0;
+            
+            const amount = quantity * rate;
+            const taxAmount = (amount * tax) / 100;
+            
+            row.querySelector('.amount-input').value = (amount + taxAmount).toFixed(2);
+            updateTotals();
+        }
+
+        function updateTotals() {
+            let subTotal = 0;
+            let totalTax = 0;
+            
+            document.querySelectorAll('.item-row').forEach(row => {
+                subTotal += parseFloat(row.querySelector('.amount-input').value) || 0;
+                const rowAmount = parseFloat(row.querySelector('.amount-input').value) || 0;
+                const rowTax = parseFloat(row.querySelector('.tax-input').value) || 0;
+                totalTax += (rowAmount * rowTax) / 100;
+            });
+            
+            document.getElementById('subTotal').value = subTotal.toFixed(2);
+            document.getElementById('taxAmount').value = totalTax.toFixed(2);
+            document.getElementById('totalAmount').value = (subTotal + totalTax).toFixed(2);
+        }
+
         function addItem() {
             const container = document.getElementById('itemsContainer');
             const newRow = document.createElement('div');
             newRow.className = 'item-row mb-2';
             newRow.innerHTML = `
                 <div class="row">
-                    <div class="col">
-                        <input type="text" class="form-control" name="items[${itemCount}][description]" placeholder="Description" required>
+                    <div class="col-md-4">
+                        <select class="form-select product-select" name="items[${itemCount}][productId]" required>
+                            <option value="">Select Product</option>
+                        </select>
                     </div>
-                    <div class="col">
-                        <input type="number" class="form-control" name="items[${itemCount}][quantity]" placeholder="Quantity" required>
+                    <div class="col-md-2">
+                        <input type="number" class="form-control quantity-input" name="items[${itemCount}][quantity]" placeholder="Quantity" required min="1">
                     </div>
-                    <div class="col">
-                        <input type="number" class="form-control" name="items[${itemCount}][rate]" placeholder="Rate" required>
+                    <div class="col-md-2">
+                        <input type="number" class="form-control rate-input" name="items[${itemCount}][rate]" placeholder="Rate" readonly>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="number" class="form-control tax-input" name="items[${itemCount}][tax]" placeholder="Tax %" readonly>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="number" class="form-control amount-input" name="items[${itemCount}][amount]" placeholder="Amount" readonly>
+                    </div>
+                </div>
+                <div class="row mt-1">
+                    <div class="col-12">
+                        <input type="text" class="form-control description-input" name="items[${itemCount}][description]" placeholder="Description" required>
                     </div>
                 </div>
             `;
             container.appendChild(newRow);
+            
+            if (document.getElementById('companyId').value) {
+                loadProducts(document.getElementById('companyId').value);
+            }
+            
+            const productSelect = newRow.querySelector('.product-select');
+            productSelect.addEventListener('change', (e) => {
+                const option = e.target.options[e.target.selectedIndex];
+                const row = e.target.closest('.item-row');
+                row.querySelector('.rate-input').value = option.dataset.price;
+                row.querySelector('.tax-input').value = option.dataset.tax;
+                calculateAmount(row);
+            });
+
+            const quantityInput = newRow.querySelector('.quantity-input');
+            quantityInput.addEventListener('input', () => {
+                calculateAmount(newRow);
+            });
+
             itemCount++;
         }
+
+        // Add event listeners to initial row
+        document.querySelector('.product-select').addEventListener('change', (e) => {
+            const option = e.target.options[e.target.selectedIndex];
+            const row = e.target.closest('.item-row');
+            row.querySelector('.rate-input').value = option.dataset.price;
+            row.querySelector('.tax-input').value = option.dataset.tax;
+            calculateAmount(row);
+        });
+
+        document.querySelector('.quantity-input').addEventListener('input', (e) => {
+            calculateAmount(e.target.closest('.item-row'));
+        });
     </script>
 </body>
-</html> 
+</html>
