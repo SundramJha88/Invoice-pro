@@ -7,7 +7,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import cookieParser from 'cookie-parser';
 
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -23,15 +22,19 @@ app.use(cookieParser());
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'src', 'views'));
 
-
-
 import authRoutes from './src/routes/auth.routes.js';
 import companyRoutes from './src/routes/company.routes.js';
 import invoiceRoutes from './src/routes/invoice.routes.js';
 import dashboardRoutes from './src/routes/dashboard.routes.js';
 import productRoutes from './src/routes/product.routes.js';
+import adminRoutes from './src/routes/admin.routes.js';
 
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Admin routes (must be before other routes)
+app.use('/admin', adminRoutes);
+
+// Other routes
 app.use('/auth', authRoutes);
 app.use('/company', companyRoutes);
 app.use('/invoice', invoiceRoutes);

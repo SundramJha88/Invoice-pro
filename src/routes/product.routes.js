@@ -1,86 +1,29 @@
 import express from 'express';
-import { auth } from '../middlewares/auth.middleware.js';
-import Product from '../models/product.model.js';
+import { auth, admin, user } from '../middlewares/auth.middleware.js';
+import {
+    getAllProducts,
+    getProductById,
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    searchProducts
+} from '../controllers/product.controller.js';
 
 const router = express.Router();
 
+// Apply auth middleware to all routes
 router.use(auth);
 
-router.get('/', async (req, res) => {
-    try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
+// Admin routes (full CRUD access)
+router.get('/admin', admin, getAllProducts);
+router.get('/admin/search', admin, searchProducts);
+router.get('/admin/:id', admin, getProductById);
+router.post('/admin', admin, createProduct);
+router.put('/admin/:id', admin, updateProduct);
+router.delete('/admin/:id', admin, deleteProduct);
 
-        const products = await Product.find()
-            .skip(skip)
-            .limit(limit)
-            .sort({ createdAt: -1 });
-
-        const total = await Product.countDocuments();
-
-        res.render('product/index', {
-            products,
-            currentPage: page,
-            totalPages: Math.ceil(total / limit),
-            totalProducts: total
-        });
-    } catch (error) {
-        res.render('product/index', { error: 'Error fetching products' });
-    }
-});
-
-router.get('/add', (req, res) => {
-    res.render('product/add');
-});
-
-router.post('/', async (req, res) => {
-    try {
-        req.body.isActive = req.body.isActive === 'on';
-        req.body.createdBy = req.user._id;
-        req.body.companyId = req.user.companyId;
-        const product = new Product(req.body);
-        await product.save();
-        res.redirect('/product');
-    } catch (error) {
-        res.render('product/add', { 
-            error: `Error creating product ${error}`,
-            product: req.body 
-        });
-    }
-});
-
-router.get('/edit/:id', async (req, res) => {
-    try {
-        const product = await Product.findById(req.params.id);
-        if (!product) {
-            return res.redirect('/product');
-        }
-        res.render('product/edit', { product });
-    } catch (error) {
-        res.redirect('/product');
-    }
-});
-
-router.post('/update/:id', async (req, res) => {
-    try {
-        await Product.findByIdAndUpdate(req.params.id, req.body);
-        res.redirect('/product');
-    } catch (error) {
-        res.render('product/edit', { 
-            error: 'Error updating product',
-            product: { ...req.body, _id: req.params.id }
-        });
-    }
-});
-
-router.get('/delete/:id', async (req, res) => {
-    try {
-        await Product.findByIdAndDelete(req.params.id);
-        res.redirect('/product');
-    } catch (error) {
-        res.redirect('/product');
-    }
-});
+// User routes (view only)
+router.get('/', user, getAllProducts);
+router.get('/:id', user, getProductById);
 
 export default router;

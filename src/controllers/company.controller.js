@@ -1,4 +1,6 @@
 import Company from '../models/company.model.js';
+import logger from '../utils/logger.js';
+import { validateCompany } from '../requests/company.request.js';
 
 export const getAllCompanies = async (req, res) => {
     try {
@@ -6,70 +8,339 @@ export const getAllCompanies = async (req, res) => {
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        const companies = await Company.find()
-            .skip(skip)
-            .limit(limit)
-            .sort({ createdAt: -1 });
+        const query = req.user.role === 'admin' ? {} : { _id: req.user.companyId };
+        const [companies, total] = await Promise.all([
+            Company.find(query)
+                .populate('createdBy', 'name')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+            Company.countDocuments(query)
+        ]);
 
-        const total = await Company.countDocuments();
+        const totalPages = Math.ceil(total / limit);
+
+        logger.info('Companies fetched successfully', { 
+            userId: req.user._id,
+            role: req.user.role,
+            page,
+            limit,
+            total
+        });
 
         res.render('company/index', {
             companies,
             currentPage: page,
-            totalPages: Math.ceil(total / limit),
-            totalCompanies: total
+            totalPages,
+            total,
+            user: req.user
         });
     } catch (error) {
-        res.render('company/index', { error: 'Error fetching companies' });
+        logger.error('Error fetching companies:', { error: error.message });
+        res.status(500).render('error', { 
+            message: 'Failed to fetch companies',
+            error: { status: 500 }
+        });
     }
 };
 
-export const getAddCompanyForm = (req, res) => {
-    res.render('company/add');
+export const getCompanyById = async (req, res) => {
+    try {
+        const company = await Company.findById(req.params.id)
+            .populate('createdBy', 'name');
+
+        if (!company) {
+            logger.warn('Company not found:', { companyId: req.params.id });
+            return res.status(404).render('error', { 
+                message: 'Company not found',
+                error: { status: 404 }
+            });
+        }
+
+        if (req.user.role === 'user' && company._id.toString() !== req.user.companyId.toString()) {
+            logger.warn('Unauthorized company access:', { 
+                userId: req.user._id,
+                companyId: req.params.id
+            });
+            return res.status(403).render('error', { 
+                message: 'Access denied',
+                error: { status: 403 }
+            });
+        }
+
+        logger.info('Company fetched successfully:', { 
+            companyId: req.params.id,
+            userId: req.user._id
+        });
+
+        res.render('company/view', { company, user: req.user });
+    } catch (error) {
+        logger.error('Error fetching company:', { 
+            error: error.message,
+            companyId: req.params.id
+        });
+        res.status(500).render('error', { 
+            message: 'Failed to fetch company',
+            error: { status: 500 }
+        });
+    }
+};
+
+export const getAddCompanyForm = async (req, res) => {
+    try {
+        logger.info('Add company form fetched:', { 
+            userId: req.user._id
+        });
+
+        res.render('company/add', { 
+            user: req.user
+        });
+    } catch (error) {
+        logger.error('Error fetching add company form:', { error: error.message });
+        res.status(500).render('error', { 
+            message: 'Failed to load company form',
+            error: { status: 500 }
+        });
+    }
 };
 
 export const createCompany = async (req, res) => {
     try {
-        const company = new Company(req.body);
+        const { error } = validateCompany(req.body);
+        if (error) {
+            logger.warn('Invalid company data:', { 
+                errors: error.details,
+                userId: req.user._id
+            });
+            return res.status(400).render('company/add', {
+                error: error.details[0].message,
+                formData: req.body,
+                user: req.user
+            });
+        }
+
+        const company = new Company({
+            ...req.body,
+            createdBy: req.user._id
+        });
+        
         await company.save();
+
+        logger.info('Company created successfully:', { 
+            companyId: company._id,
+            userId: req.user._id
+        });
+
         res.redirect('/company');
     } catch (error) {
-        res.render('company/add', { 
-            error: 'Error creating company',
-            company: req.body 
+        logger.error('Error creating company:', { 
+            error: error.message,
+            userId: req.user._id
+        });
+        res.status(500).render('company/add', {
+            error: 'Failed to create company',
+            formData: req.body,
+            user: req.user
         });
     }
 };
 
 export const getEditCompanyForm = async (req, res) => {
     try {
-        const company = await Company.findById(req.params.id);
+        const company = await Company.findById(req.params.id)
+            .populate('createdBy', 'name');
+
         if (!company) {
-            return res.redirect('/company');
+            logger.warn('Company not found:', { companyId: req.params.id });
+            return res.status(404).render('error', { 
+                message: 'Company not found',
+                error: { status: 404 }
+            });
         }
-        res.render('company/edit', { company });
+
+        if (req.user.role === 'user' && company._id.toString() !== req.user.companyId.toString()) {
+            logger.warn('Unauthorized company access:', { 
+                userId: req.user._id,
+                companyId: req.params.id
+            });
+            return res.status(403).render('error', { 
+                message: 'Access denied',
+                error: { status: 403 }
+            });
+        }
+
+        logger.info('Edit company form fetched:', { 
+            companyId: req.params.id,
+            userId: req.user._id
+        });
+
+        res.render('company/edit', { 
+            user: req.user,
+            company
+        });
     } catch (error) {
-        res.redirect('/company');
+        logger.error('Error fetching edit company form:', { 
+            error: error.message,
+            companyId: req.params.id
+        });
+        res.status(500).render('error', { 
+            message: 'Failed to load edit form',
+            error: { status: 500 }
+        });
     }
 };
 
 export const updateCompany = async (req, res) => {
     try {
-        await Company.findByIdAndUpdate(req.params.id, req.body);
+        const { error } = validateCompany(req.body);
+        if (error) {
+            logger.warn('Invalid company data:', { 
+                errors: error.details,
+                companyId: req.params.id
+            });
+            return res.status(400).render('company/edit', {
+                error: error.details[0].message,
+                company: req.body,
+                user: req.user
+            });
+        }
+
+        const company = await Company.findById(req.params.id);
+        if (!company) {
+            logger.warn('Company not found:', { companyId: req.params.id });
+            return res.status(404).render('error', { 
+                message: 'Company not found',
+                error: { status: 404 }
+            });
+        }
+
+        if (req.user.role === 'user' && company._id.toString() !== req.user.companyId.toString()) {
+            logger.warn('Unauthorized company update:', { 
+                userId: req.user._id,
+                companyId: req.params.id
+            });
+            return res.status(403).render('error', { 
+                message: 'Access denied',
+                error: { status: 403 }
+            });
+        }
+
+        Object.assign(company, req.body);
+        await company.save();
+
+        logger.info('Company updated successfully:', { 
+            companyId: req.params.id,
+            userId: req.user._id
+        });
+
         res.redirect('/company');
     } catch (error) {
-        res.render('company/edit', { 
-            error: 'Error updating company',
-            company: { ...req.body, _id: req.params.id }
+        logger.error('Error updating company:', { 
+            error: error.message,
+            companyId: req.params.id
+        });
+        res.status(500).render('company/edit', {
+            error: 'Failed to update company',
+            company: req.body,
+            user: req.user
         });
     }
 };
 
 export const deleteCompany = async (req, res) => {
     try {
-        await Company.findByIdAndDelete(req.params.id);
+        const company = await Company.findById(req.params.id);
+        if (!company) {
+            logger.warn('Company not found:', { companyId: req.params.id });
+            return res.status(404).render('error', { 
+                message: 'Company not found',
+                error: { status: 404 }
+            });
+        }
+
+        if (req.user.role === 'user' && company._id.toString() !== req.user.companyId.toString()) {
+            logger.warn('Unauthorized company deletion:', { 
+                userId: req.user._id,
+                companyId: req.params.id
+            });
+            return res.status(403).render('error', { 
+                message: 'Access denied',
+                error: { status: 403 }
+            });
+        }
+
+        await company.deleteOne();
+
+        logger.info('Company deleted successfully:', { 
+            companyId: req.params.id,
+            userId: req.user._id
+        });
+
         res.redirect('/company');
     } catch (error) {
-        res.redirect('/company');
+        logger.error('Error deleting company:', { 
+            error: error.message,
+            companyId: req.params.id
+        });
+        res.status(500).render('error', { 
+            message: 'Failed to delete company',
+            error: { status: 500 }
+        });
+    }
+};
+
+export const searchCompanies = async (req, res) => {
+    try {
+        const { query } = req.query;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const searchQuery = {
+            $or: [
+                { name: { $regex: query, $options: 'i' } },
+                { email: { $regex: query, $options: 'i' } },
+                { phone: { $regex: query, $options: 'i' } }
+            ]
+        };
+
+        if (req.user.role === 'user') {
+            searchQuery._id = req.user.companyId;
+        }
+
+        const [companies, total] = await Promise.all([
+            Company.find(searchQuery)
+                .populate('createdBy', 'name')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+            Company.countDocuments(searchQuery)
+        ]);
+
+        const totalPages = Math.ceil(total / limit);
+
+        logger.info('Company search completed:', { 
+            query,
+            userId: req.user._id,
+            results: companies.length
+        });
+
+        res.render('company/index', {
+            companies,
+            currentPage: page,
+            totalPages,
+            total,
+            searchQuery: query,
+            user: req.user
+        });
+    } catch (error) {
+        logger.error('Error searching companies:', { 
+            error: error.message,
+            query: req.query.query
+        });
+        res.status(500).render('error', { 
+            message: 'Failed to search companies',
+            error: { status: 500 }
+        });
     }
 };

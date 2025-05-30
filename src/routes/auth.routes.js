@@ -4,21 +4,30 @@ import Company from '../models/company.model.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../config/index.js';
+import { auth, admin } from '../middlewares/auth.middleware.js';
+import logger from '../utils/logger.js';
 
 const router = express.Router();
 
+// Public routes
 router.get('/login', (req, res) => {
     res.render('auth/login');
 });
 
-router.get('/register', async (req, res) => {
+// Protected routes
+router.get('/register', auth, admin, async (req, res) => {
     try {
         const companies = await Company.find().select('name');
-        res.render('auth/register', { companies });
+        res.render('auth/register', { 
+            companies,
+            user: req.user
+        });
     } catch (error) {
+        logger.error('Error loading registration form:', { error: error.message });
         res.render('auth/register', { 
             error: 'Error loading companies',
-            companies: []
+            companies: [],
+            user: req.user
         });
     }
 });
@@ -26,7 +35,7 @@ router.get('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email }).populate('companyId');
         
         if (!user) {
             return res.render('auth/login', { error: 'Invalid credentials' });
@@ -37,23 +46,31 @@ router.post('/login', async (req, res) => {
             return res.render('auth/login', { error: 'Invalid credentials' });
         }
 
-        const token = jwt.sign({ userId: user._id },JWT_SECRET, { expiresIn: '1d' });
+        const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1d' });
         res.cookie('token', token, { httpOnly: true });
+
+        // Redirect based on role
+        if (user.role === 'admin') {
+            res.redirect('/admin');
+        } else {
         res.redirect('/dashboard');
+        }
     } catch (error) {
+        logger.error('Login error:', { error: error.message });
         res.render('auth/login', { error: 'Server error' });
     }
 });
 
-router.post('/register', async (req, res) => {
+router.post('/register', auth, admin, async (req, res) => {
     try {
-        const { name, email, password, companyId } = req.body;
+        const { name, email, password, companyId, role } = req.body;
         
         if (!name || !email || !password || !companyId) {
             const companies = await Company.find().select('name');
             return res.render('auth/register', { 
                 error: 'All fields are required',
-                companies
+                companies,
+                user: req.user
             });
         }
 
@@ -62,7 +79,8 @@ router.post('/register', async (req, res) => {
             const companies = await Company.find().select('name');
             return res.render('auth/register', { 
                 error: 'Email already registered',
-                companies
+                companies,
+                user: req.user
             });
         }
 
@@ -71,20 +89,24 @@ router.post('/register', async (req, res) => {
             email,
             password,
             companyId,
-            role: 'user'
+            role: role || 'user'
         });
 
         await user.save();
         
-        const token = jwt.sign({ userId: user._id, companyId: user.companyId }, JWT_SECRET, { expiresIn: '1d' });
-        res.cookie('token', token, { httpOnly: true });
-        res.redirect('/dashboard');
+        logger.info('New user registered by admin:', { 
+            adminId: req.user._id,
+            newUserId: user._id
+        });
+
+        res.redirect('/admin');
     } catch (error) {
-        console.error('Registration error:', error);
+        logger.error('Registration error:', { error: error.message });
         const companies = await Company.find().select('name');
         res.render('auth/register', { 
             error: 'Error creating account: ' + error.message,
-            companies
+            companies,
+            user: req.user
         });
     }
 });
