@@ -57,27 +57,26 @@ export const getUsers = async (req, res) => {
         const limit = 10;
         const skip = (page - 1) * limit;
 
-        const [users, total] = await Promise.all([
-            User.find()
-                .populate('companyId', 'name')
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit),
-            User.countDocuments()
-        ]);
+        const users = await User.find()
+            .populate('companyId')
+            .skip(skip)
+            .limit(limit)
+            .sort({ createdAt: -1 });
+
+        const totalUsers = await User.countDocuments();
+        const totalPages = Math.ceil(totalUsers / limit);
 
         res.render('admin/users', {
-            user: req.user,
             users,
             currentPage: page,
-            totalPages: Math.ceil(total / limit),
-            total
+            totalPages,
+            user: req.user
         });
     } catch (error) {
-        logger.error('Error fetching users:', { error: error.message });
+        logger.error('Error fetching users:', error);
         res.status(500).render('error', { 
-            message: 'Failed to load users',
-            error: { status: 500 }
+            message: 'Error fetching users',
+            error: error.message
         });
     }
 };
@@ -85,35 +84,43 @@ export const getUsers = async (req, res) => {
 export const updateUser = async (req, res) => {
     try {
         const { id } = req.params;
-        const { role, isActive } = req.body;
+        const { role, isActive, isApproved } = req.body;
 
         const user = await User.findById(id);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Prevent admin from modifying other admins
-        if (user.role === 'admin' && req.user._id.toString() !== user._id.toString()) {
+        // Prevent modifying other admin users
+        if (user.role === 'admin' && user._id.toString() !== req.user._id.toString()) {
             return res.status(403).json({ message: 'Cannot modify other admin users' });
         }
 
-        user.role = role;
-        user.isActive = isActive;
+        // Update user fields
+        if (role) user.role = role;
+        if (typeof isActive === 'boolean') user.isActive = isActive;
+        if (typeof isApproved === 'boolean') user.isApproved = isApproved;
+
         await user.save();
 
-        logger.info('User updated by admin:', { 
-            adminId: req.user._id,
-            userId: user._id,
-            updates: { role, isActive }
-        });
+        // If user is approved and doesn't have a company, create one
+        if (user.isApproved && !user.companyId) {
+            const company = await Company.create({
+                name: user.companyName,
+                email: user.companyEmail,
+                phone: user.companyPhone,
+                address: user.companyAddress,
+                createdBy: user._id
+            });
 
-        res.redirect('/admin/users');
+            user.companyId = company._id;
+            await user.save();
+        }
+
+        res.json({ message: 'User updated successfully' });
     } catch (error) {
-        logger.error('Error updating user:', { error: error.message });
-        res.status(500).render('error', { 
-            message: 'Failed to update user',
-            error: { status: 500 }
-        });
+        logger.error('Error updating user:', error);
+        res.status(500).json({ message: 'Error updating user' });
     }
 };
 
@@ -126,24 +133,15 @@ export const deleteUser = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Prevent admin from deleting other admins
-        if (user.role === 'admin' && req.user._id.toString() !== user._id.toString()) {
+        // Prevent deleting other admin users
+        if (user.role === 'admin' && user._id.toString() !== req.user._id.toString()) {
             return res.status(403).json({ message: 'Cannot delete other admin users' });
         }
 
-        await user.remove();
-
-        logger.info('User deleted by admin:', { 
-            adminId: req.user._id,
-            userId: user._id
-        });
-
-        res.redirect('/admin/users');
+        await user.deleteOne();
+        res.json({ message: 'User deleted successfully' });
     } catch (error) {
-        logger.error('Error deleting user:', { error: error.message });
-        res.status(500).render('error', { 
-            message: 'Failed to delete user',
-            error: { status: 500 }
-        });
+        logger.error('Error deleting user:', error);
+        res.status(500).json({ message: 'Error deleting user' });
     }
 }; 

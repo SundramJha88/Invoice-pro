@@ -11,6 +11,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../config/index.js';
 import logger from '../utils/logger.js';
+import { isAdmin } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
@@ -67,6 +68,9 @@ router.use(admin);
 
 // Admin dashboard
 router.get('/', getAdminDashboard);
+
+// Apply admin middleware to all routes
+router.use(isAdmin);
 
 // User management routes
 router.get('/users', getUsers);

@@ -13,7 +13,7 @@ export const getAllCompanies = async (req, res) => {
             Company.find(query)
                 .populate('createdBy', 'name')
                 .sort({ createdAt: -1 })
-                .skip(skip)
+            .skip(skip)
                 .limit(limit),
             Company.countDocuments(query)
         ]);
