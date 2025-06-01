@@ -36,8 +36,14 @@ export const getAdminDashboard = async (req, res) => {
         res.render('admin/index', {
             user: req.user,
             stats,
-            recentInvoices,
-            recentUsers
+            recentInvoices: recentInvoices.map(invoice => ({
+                ...invoice.toObject(),
+                companyName: invoice.companyId?.name || 'No Company'
+            })),
+            recentUsers: recentUsers.map(user => ({
+                ...user.toObject(),
+                companyName: user.companyId?.name || 'No Company'
+            }))
         });
     } catch (error) {
         logger.error('Error accessing admin dashboard:', { 
@@ -63,19 +69,20 @@ export const getUsers = async (req, res) => {
             .limit(limit)
             .sort({ createdAt: -1 });
 
-        const totalUsers = await User.countDocuments();
-        const totalPages = Math.ceil(totalUsers / limit);
+        const total = await User.countDocuments();
+        const totalPages = Math.ceil(total / limit);
 
         res.render('admin/users', {
             users,
             currentPage: page,
             totalPages,
-            user: req.user
+            user: req.user,
+            req: req
         });
     } catch (error) {
-        logger.error('Error fetching users:', error);
+        logger.error('Error in getUsers:', error);
         res.status(500).render('error', { 
-            message: 'Error fetching users',
+            message: 'Error loading users',
             error: error.message
         });
     }
