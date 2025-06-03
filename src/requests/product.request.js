@@ -58,7 +58,6 @@ export class CreateProductRequest {
 export class UpdateProductRequest extends CreateProductRequest {
     static rules() {
         const rules = super.rules();
-        // All fields optional for update, but if present, must be valid
         for (const key in rules) {
             rules[key].required = false;
         }

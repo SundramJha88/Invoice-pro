@@ -8,44 +8,34 @@ async function resetAdmin() {
         await mongoose.connect(MONGO_URI);
         console.log('Connected to MongoDB');
 
-        // Delete existing admin user and company
-        await User.deleteOne({ email: 'admin@invoicepro.com' });
-        await Company.deleteOne({ name: 'Admin Company' });
-        console.log('Deleted existing admin user and company');
+        await User.deleteOne({ email: 'admin@example.com' });
+        await Company.deleteOne({ email: 'admin@example.com' });
 
-        // Create new company
         const company = await Company.create({
             name: 'Admin Company',
-            email: 'admin@company.com',
-            phone: '1234567890',
-            address: 'Admin Address',
-            isActive: true
+            email: 'admin@example.com',
+            phone: '+1234567890',
+            address: '123 Admin St, Admin City'
         });
-        console.log('Created new admin company');
 
-        // Create new admin user (password will be hashed by the User model)
         const admin = await User.create({
             name: 'Admin User',
-            email: 'admin@invoicepro.com',
-            password: 'admin123', // Will be hashed by the User model
+            email: 'admin@example.com',
+            password: 'admin123',
             role: 'admin',
-            companyId: company._id,
-            isActive: true
+            isActive: true,
+            isApproved: true,
+            companyId: company._id
         });
 
-        // Update company with createdBy
         company.createdBy = admin._id;
         await company.save();
 
-        console.log('Admin user created successfully');
-        console.log('Email: admin@invoicepro.com');
-        console.log('Password: admin123');
-
+        console.log('Admin user and company reset successfully');
+        process.exit(0);
     } catch (error) {
         console.error('Error resetting admin:', error);
-    } finally {
-        await mongoose.disconnect();
-        process.exit(0);
+        process.exit(1);
     }
 }
 

@@ -4,7 +4,6 @@ const validateCompany = (data) => {
     const errors = {};
     let isValid = true;
 
-    // Name validation
     if (!data.name || data.name.trim() === '') {
         errors.name = 'Company name is required';
         isValid = false;
@@ -13,7 +12,6 @@ const validateCompany = (data) => {
         isValid = false;
     }
 
-    // Email validation
     if (!data.email || data.email.trim() === '') {
         errors.email = 'Email is required';
         isValid = false;
@@ -25,7 +23,6 @@ const validateCompany = (data) => {
         }
     }
 
-    // Phone validation
     if (!data.phone || data.phone.trim() === '') {
         errors.phone = 'Phone number is required';
         isValid = false;
@@ -37,13 +34,11 @@ const validateCompany = (data) => {
         }
     }
 
-    // Address validation
     if (!data.address || data.address.trim() === '') {
         errors.address = 'Address is required';
         isValid = false;
     }
 
-    // GST Number validation (optional but must be valid if provided)
     if (data.gstNumber && data.gstNumber.trim() !== '') {
         const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
         if (!gstRegex.test(data.gstNumber)) {
@@ -52,7 +47,6 @@ const validateCompany = (data) => {
         }
     }
 
-    // PAN Number validation (optional but must be valid if provided)
     if (data.panNumber && data.panNumber.trim() !== '') {
         const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
         if (!panRegex.test(data.panNumber)) {
@@ -128,7 +122,6 @@ export class CreateCompanyRequest {
 export class UpdateCompanyRequest extends CreateCompanyRequest {
     static rules() {
         const rules = super.rules();
-        // All fields optional for update, but if present, must be valid
         for (const key in rules) {
             rules[key].required = false;
         }

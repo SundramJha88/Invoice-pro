@@ -31,17 +31,14 @@ import adminRoutes from './src/routes/admin.routes.js';
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Admin routes (must be before other routes)
 app.use('/admin', adminRoutes);
 
-// Other routes
 app.use('/auth', authRoutes);
 app.use('/company', companyRoutes);
 app.use('/invoice', invoiceRoutes);
 app.use('/dashboard', dashboardRoutes);
 app.use('/product', productRoutes);
 
-// Add root route handler
 app.get('/', (req, res) => {
   res.redirect('/dashboard');
 });

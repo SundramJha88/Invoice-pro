@@ -319,10 +319,10 @@ export const searchCompanies = async (req, res) => {
 
         const totalPages = Math.ceil(total / limit);
 
-        logger.info('Company search completed:', { 
-            query,
+        logger.info('Companies search completed:', { 
             userId: req.user._id,
-            results: companies.length
+            query,
+            total
         });
 
         res.render('company/index', {
@@ -330,14 +330,11 @@ export const searchCompanies = async (req, res) => {
             currentPage: page,
             totalPages,
             total,
-            searchQuery: query,
+            query,
             user: req.user
         });
     } catch (error) {
-        logger.error('Error searching companies:', { 
-            error: error.message,
-            query: req.query.query
-        });
+        logger.error('Error searching companies:', { error: error.message });
         res.status(500).render('error', { 
             message: 'Failed to search companies',
             error: { status: 500 }

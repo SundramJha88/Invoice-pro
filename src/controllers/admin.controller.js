@@ -98,19 +98,16 @@ export const updateUser = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Prevent modifying other admin users
         if (user.role === 'admin' && user._id.toString() !== req.user._id.toString()) {
             return res.status(403).json({ message: 'Cannot modify other admin users' });
         }
 
-        // Update user fields
         if (role) user.role = role;
         if (typeof isActive === 'boolean') user.isActive = isActive;
         if (typeof isApproved === 'boolean') user.isApproved = isApproved;
 
         await user.save();
 
-        // If user is approved and doesn't have a company, create one
         if (user.isApproved && !user.companyId) {
             const company = await Company.create({
                 name: user.companyName,
@@ -140,7 +137,6 @@ export const deleteUser = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Prevent deleting other admin users
         if (user.role === 'admin' && user._id.toString() !== req.user._id.toString()) {
             return res.status(403).json({ message: 'Cannot delete other admin users' });
         }

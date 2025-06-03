@@ -54,19 +54,16 @@ export class CreateInvoiceRequest {
         const rules = this.rules();
         const errors = {};
 
-        // Validate required fields
         for (const [field, rule] of Object.entries(rules)) {
             if (rule.required && !data[field]) {
                 errors[field] = rule.message;
             }
         }
 
-        // Validate invoice number format
         if (data.invoiceNumber && !rule.pattern.test(data.invoiceNumber)) {
             errors.invoiceNumber = rule.message;
         }
 
-        // Validate dates
         if (data.date && isNaN(Date.parse(data.date))) {
             errors.date = rules.date.message;
         }
@@ -74,7 +71,6 @@ export class CreateInvoiceRequest {
             errors.dueDate = rules.dueDate.message;
         }
 
-        // Validate items array
         if (data.items) {
             if (!Array.isArray(data.items) || data.items.length === 0) {
                 errors.items = rules.items.message;
@@ -106,8 +102,7 @@ export class CreateInvoiceRequest {
 export class UpdateInvoiceRequest extends CreateInvoiceRequest {
     static rules() {
         const rules = super.rules();
-        // Remove required validation for invoice number on update
-        delete rules.invoiceNumber.required;
+        rules.invoiceNumber.required = false;
         return rules;
     }
 } 

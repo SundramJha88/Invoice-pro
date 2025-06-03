@@ -3,13 +3,11 @@ import Product from '../models/product.model.js';
 
 export const getDashboard = async (req, res) => {
     try {
-        // Get counts for dashboard
         const [totalInvoices, totalProducts] = await Promise.all([
             Invoice.countDocuments({ companyId: req.user.companyId }),
             Product.countDocuments({ companyId: req.user.companyId })
         ]);
 
-        // Get recent invoices
         const recentInvoices = await Invoice.find({ companyId: req.user.companyId })
             .sort({ createdAt: -1 })
             .limit(5)

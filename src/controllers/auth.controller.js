@@ -15,7 +15,6 @@ export const register = async (req, res) => {
             companyAddress
         } = req.body;
 
-        // Validate required fields
         if (!name || !email || !password || !confirmPassword || 
             !companyName || !companyEmail || !companyPhone || !companyAddress) {
             return res.render('auth/register', { 
@@ -24,7 +23,6 @@ export const register = async (req, res) => {
             });
         }
 
-        // Check if passwords match
         if (password !== confirmPassword) {
             return res.render('auth/register', { 
                 error: 'Passwords do not match',
@@ -32,7 +30,6 @@ export const register = async (req, res) => {
             });
         }
 
-        // Check if user already exists
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.render('auth/register', { 
@@ -41,7 +38,6 @@ export const register = async (req, res) => {
             });
         }
 
-        // Create new user with pending approval
         const user = await User.create({
             name,
             email,
@@ -79,7 +75,6 @@ export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Validate required fields
         if (!email || !password) {
             return res.render('auth/login', { 
                 error: 'Email and password are required',
@@ -95,7 +90,6 @@ export const login = async (req, res) => {
             });
         }
 
-        // Check if user is approved
         if (!user.isApproved) {
             return res.render('auth/login', { 
                 error: 'Your account is pending approval. Please wait for admin confirmation.',
@@ -111,7 +105,6 @@ export const login = async (req, res) => {
             });
         }
 
-        // Create company if not exists
         if (!user.companyId) {
             const company = await Company.create({
                 name: user.companyName,

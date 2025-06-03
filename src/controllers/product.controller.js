@@ -304,7 +304,7 @@ export const searchProducts = async (req, res) => {
             $or: [
                 { name: { $regex: query, $options: 'i' } },
                 { description: { $regex: query, $options: 'i' } },
-                { category: { $regex: query, $options: 'i' } }
+                { sku: { $regex: query, $options: 'i' } }
             ]
         };
 
@@ -324,10 +324,10 @@ export const searchProducts = async (req, res) => {
 
         const totalPages = Math.ceil(total / limit);
 
-        logger.info('Product search completed:', { 
-            query,
+        logger.info('Products search completed:', { 
             userId: req.user._id,
-            results: products.length
+            query,
+            total
         });
 
         res.render('product/index', {
@@ -335,14 +335,11 @@ export const searchProducts = async (req, res) => {
             currentPage: page,
             totalPages,
             total,
-            searchQuery: query,
+            query,
             user: req.user
         });
     } catch (error) {
-        logger.error('Error searching products:', { 
-            error: error.message,
-            query: req.query.query
-        });
+        logger.error('Error searching products:', { error: error.message });
         res.status(500).render('error', { 
             message: 'Failed to search products',
             error: { status: 500 }
