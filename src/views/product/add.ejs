@@ -33,29 +33,49 @@
                             </div>
                         <% } %>
 
-                        <form action="/product" method="POST">
+                        <form action="/products/admin/add" method="POST">
                             <div class="mb-3">
                                 <label for="name" class="form-label">Product Name</label>
                                 <input type="text" class="form-control <%= validationErrors?.name ? 'is-invalid' : '' %>" 
-                                       id="name" name="name" value="<%= locals.product?.name || '' %>" required>
+                                       id="name" name="name" value="<%= locals.formData?.name || '' %>" required>
                                 <% if (validationErrors?.name) { %>
                                     <div class="invalid-feedback"><%= validationErrors.name %></div>
                                 <% } %>
                             </div>
 
                             <div class="mb-3">
-                                <label for="description" class="form-label">Description</label>
-                                <textarea class="form-control <%= validationErrors?.description ? 'is-invalid' : '' %>" 
-                                          id="description" name="description" rows="3"><%= locals.product?.description || '' %></textarea>
-                                <% if (validationErrors?.description) { %>
-                                    <div class="invalid-feedback"><%= validationErrors.description %></div>
+                                <label for="category" class="form-label">Category</label>
+                                <input type="text" class="form-control <%= validationErrors?.category ? 'is-invalid' : '' %>" 
+                                       id="category" name="category" value="<%= locals.formData?.category || '' %>" required>
+                                <% if (validationErrors?.category) { %>
+                                    <div class="invalid-feedback"><%= validationErrors.category %></div>
+                                <% } %>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="unit" class="form-label">Unit</label>
+                                <select class="form-control <%= validationErrors?.unit ? 'is-invalid' : '' %>" 
+                                        id="unit" name="unit" required>
+                                    <option value="">Select Unit</option>
+                                    <option value="piece" <%= locals.formData?.unit === 'piece' ? 'selected' : '' %>>Piece</option>
+                                    <option value="kg" <%= locals.formData?.unit === 'kg' ? 'selected' : '' %>>Kilogram (kg)</option>
+                                    <option value="g" <%= locals.formData?.unit === 'g' ? 'selected' : '' %>>Gram (g)</option>
+                                    <option value="l" <%= locals.formData?.unit === 'l' ? 'selected' : '' %>>Liter (l)</option>
+                                    <option value="ml" <%= locals.formData?.unit === 'ml' ? 'selected' : '' %>>Milliliter (ml)</option>
+                                    <option value="m" <%= locals.formData?.unit === 'm' ? 'selected' : '' %>>Meter (m)</option>
+                                    <option value="cm" <%= locals.formData?.unit === 'cm' ? 'selected' : '' %>>Centimeter (cm)</option>
+                                    <option value="box" <%= locals.formData?.unit === 'box' ? 'selected' : '' %>>Box</option>
+                                    <option value="pack" <%= locals.formData?.unit === 'pack' ? 'selected' : '' %>>Pack</option>
+                                </select>
+                                <% if (validationErrors?.unit) { %>
+                                    <div class="invalid-feedback"><%= validationErrors.unit %></div>
                                 <% } %>
                             </div>
 
                             <div class="mb-3">
                                 <label for="price" class="form-label">Price (₹)</label>
                                 <input type="number" step="0.01" class="form-control <%= validationErrors?.price ? 'is-invalid' : '' %>" 
-                                       id="price" name="price" value="<%= locals.product?.price || '' %>" required>
+                                       id="price" name="price" value="<%= locals.formData?.price || '' %>" required>
                                 <% if (validationErrors?.price) { %>
                                     <div class="invalid-feedback"><%= validationErrors.price %></div>
                                 <% } %>
@@ -64,7 +84,7 @@
                             <div class="mb-3">
                                 <label for="taxRate" class="form-label">Tax Rate (%)</label>
                                 <input type="number" step="0.01" class="form-control <%= validationErrors?.taxRate ? 'is-invalid' : '' %>" 
-                                       id="taxRate" name="taxRate" value="<%= locals.product?.taxRate || '' %>" required>
+                                       id="taxRate" name="taxRate" value="<%= locals.formData?.taxRate || '' %>" required>
                                 <% if (validationErrors?.taxRate) { %>
                                     <div class="invalid-feedback"><%= validationErrors.taxRate %></div>
                                 <% } %>
@@ -73,7 +93,7 @@
                             <div class="mb-3">
                                 <label for="inStock" class="form-label">Stock Quantity</label>
                                 <input type="number" class="form-control <%= validationErrors?.inStock ? 'is-invalid' : '' %>" 
-                                       id="inStock" name="inStock" value="<%= locals.product?.inStock || '' %>" required>
+                                       id="inStock" name="inStock" value="<%= locals.formData?.inStock || '' %>" required>
                                 <% if (validationErrors?.inStock) { %>
                                     <div class="invalid-feedback"><%= validationErrors.inStock %></div>
                                 <% } %>
@@ -82,14 +102,14 @@
                             <div class="mb-3">
                                 <div class="form-check">
                                     <input type="checkbox" class="form-check-input" id="isActive" name="isActive" 
-                                           <%= locals.product?.isActive ? 'checked' : '' %>>
+                                           <%= locals.formData?.isActive ? 'checked' : '' %>>
                                     <label class="form-check-label" for="isActive">Active</label>
                                 </div>
                             </div>
 
                             <div class="d-grid gap-2">
                                 <button type="submit" class="btn btn-primary">Add Product</button>
-                                <a href="/product" class="btn btn-secondary">Cancel</a>
+                                <a href="/products/admin" class="btn btn-secondary">Cancel</a>
                             </div>
                         </form>
                     </div>

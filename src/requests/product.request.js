@@ -6,6 +6,14 @@ export class CreateProductRequest {
                 minLength: 2,
                 message: 'Product name is required (min 2 chars)'
             },
+            category: {
+                required: true,
+                message: 'Category is required'
+            },
+            unit: {
+                required: true,
+                message: 'Unit is required'
+            },
             price: {
                 required: true,
                 type: 'number',

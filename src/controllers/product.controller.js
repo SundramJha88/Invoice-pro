@@ -34,7 +34,8 @@ export const getAllProducts = async (req, res) => {
             currentPage: page,
             totalPages,
             total,
-            user: req.user
+            user: req.user,
+            error: null
         });
     } catch (error) {
         logger.error('Error fetching products:', { error: error.message });
@@ -90,15 +91,37 @@ export const getProductById = async (req, res) => {
 
 export const getAddProductForm = async (req, res) => {
     try {
-        logger.info('Add product form fetched:', { 
-            userId: req.user._id
+        logger.info('Add product form request received:', { 
+            userId: req.user._id,
+            role: req.user.role,
+            email: req.user.email,
+            path: req.path,
+            method: req.method
         });
 
+        if (!req.user || req.user.role !== 'admin') {
+            logger.warn('Unauthorized access to add product form:', { 
+                userId: req.user?._id,
+                role: req.user?.role,
+                email: req.user?.email
+            });
+            return res.status(403).render('error', {
+                message: 'Access denied. Admin privileges required.',
+                error: { status: 403 }
+            });
+        }
+
         res.render('product/add', { 
-            user: req.user
+            user: req.user,
+            error: null,
+            validationErrors: null,
+            formData: null
         });
     } catch (error) {
-        logger.error('Error fetching add product form:', { error: error.message });
+        logger.error('Error fetching add product form:', { 
+            error: error.message,
+            stack: error.stack
+        });
         res.status(500).render('error', { 
             message: 'Failed to load product form',
             error: { status: 500 }
@@ -108,21 +131,37 @@ export const getAddProductForm = async (req, res) => {
 
 export const createProduct = async (req, res) => {
     try {
+        logger.info('Create product request received:', {
+            body: req.body,
+            userId: req.user._id,
+            role: req.user.role,
+            email: req.user.email
+        });
+
         const validation = CreateProductRequest.validate(req.body);
         if (!validation.isValid) {
             logger.warn('Invalid product data:', { 
                 errors: validation.errors,
-                userId: req.user._id
+                userId: req.user._id,
+                body: req.body
             });
             return res.status(400).render('product/add', {
-                error: Object.values(validation.errors)[0],
+                error: 'Please fix the errors below',
+                validationErrors: validation.errors,
                 formData: req.body,
                 user: req.user
             });
         }
 
         const product = new Product({
-            ...req.body,
+            name: req.body.name,
+            description: req.body.description || '',
+            category: req.body.category,
+            unit: req.body.unit,
+            price: parseFloat(req.body.price),
+            taxRate: parseFloat(req.body.taxRate),
+            inStock: parseInt(req.body.inStock),
+            isActive: req.body.isActive === 'on',
             companyId: req.user.role === 'admin' ? req.body.companyId : req.user.companyId,
             createdBy: req.user._id
         });
@@ -131,17 +170,29 @@ export const createProduct = async (req, res) => {
 
         logger.info('Product created successfully:', { 
             productId: product._id,
-            userId: req.user._id
+            userId: req.user._id,
+            product: product
         });
 
-        res.redirect('/product');
+        res.redirect('/products/admin');
     } catch (error) {
         logger.error('Error creating product:', { 
             error: error.message,
-            userId: req.user._id
+            stack: error.stack,
+            userId: req.user._id,
+            body: req.body
         });
+        
+        if (error.code === 11000) {
+            return res.status(400).render('product/add', {
+                error: 'A product with this name already exists',
+                formData: req.body,
+                user: req.user
+            });
+        }
+
         res.status(500).render('product/add', {
-            error: 'Failed to create product',
+            error: 'Failed to create product. Please try again.',
             formData: req.body,
             user: req.user
         });

@@ -58,14 +58,12 @@ const productSchema = new mongoose.Schema({
     companyId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Company',
-        required: [true, 'Company ID is required'],
-        index: true
+        required: [true, 'Company ID is required']
     },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: [true, 'Creator ID is required'],
-        index: true
+        required: [true, 'Creator ID is required']
     }
 }, {
     timestamps: true,
@@ -73,7 +71,9 @@ const productSchema = new mongoose.Schema({
     toObject: { getters: true }
 });
 
-productSchema.index({ name: 1, companyId: 1 }, { unique: true });
+// Remove the unique index that might be causing issues
+// productSchema.index({ name: 1, companyId: 1 }, { unique: true });
+
 productSchema.index({ companyId: 1, category: 1 });
 productSchema.index({ companyId: 1, isActive: 1 });
 productSchema.index({ companyId: 1, inStock: 1 });

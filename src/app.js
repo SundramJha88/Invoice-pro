@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import authRoutes from './routes/auth.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import productRoutes from './routes/product.routes.js';
 import { MONGODB_URI, SESSION_SECRET } from './config/index.js';
 import logger from './utils/logger.js';
 
@@ -38,9 +39,24 @@ app.use(session({
     }
 }));
 
+// Debug middleware to log all requests
+app.use((req, res, next) => {
+    logger.info('Incoming request:', {
+        method: req.method,
+        path: req.path,
+        user: req.user ? {
+            id: req.user._id,
+            role: req.user.role,
+            email: req.user.email
+        } : null
+    });
+    next();
+});
+
 // Routes
 app.use('/auth', authRoutes);
 app.use('/admin', adminRoutes);
+app.use('/products', productRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -52,7 +68,16 @@ app.use((err, req, res, next) => {
 });
 
 // 404 handler
-app.use((req, res) => {
+app.use((req, res, next) => {
+    logger.warn('Page not found:', {
+        method: req.method,
+        path: req.path,
+        user: req.user ? {
+            id: req.user._id,
+            role: req.user.role,
+            email: req.user.email
+        } : null
+    });
     res.status(404).render('error', {
         message: 'Page not found',
         error: { status: 404 }
