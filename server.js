@@ -37,7 +37,7 @@ app.use('/auth', authRoutes);
 app.use('/company', companyRoutes);
 app.use('/invoice', invoiceRoutes);
 app.use('/dashboard', dashboardRoutes);
-app.use('/product', productRoutes);
+app.use('/products', productRoutes);
 
 app.get('/', (req, res) => {
   res.redirect('/dashboard');

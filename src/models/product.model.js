@@ -71,8 +71,11 @@ const productSchema = new mongoose.Schema({
     toObject: { getters: true }
 });
 
-// Remove the unique index that might be causing issues
-// productSchema.index({ name: 1, companyId: 1 }, { unique: true });
+// Create compound index for name and companyId
+productSchema.index({ name: 1, companyId: 1 }, { 
+    unique: true,
+    partialFilterExpression: { isActive: true }
+});
 
 productSchema.index({ companyId: 1, category: 1 });
 productSchema.index({ companyId: 1, isActive: 1 });
