@@ -1,4 +1,5 @@
 import Product from '../models/product.model.js';
+import Company from '../models/company.model.js';
 import logger from '../utils/logger.js';
 import { CreateProductRequest, UpdateProductRequest } from '../requests/product.request.js';
 
@@ -29,14 +30,26 @@ export const getAllProducts = async (req, res) => {
             total
         });
 
-        res.render('product/index', {
-            products,
-            currentPage: page,
-            totalPages,
-            total,
-            user: req.user,
-            error: null
-        });
+        if (req.user.role === 'admin') {
+            res.render('product/admin/index', {
+                products,
+                currentPage: page,
+                totalPages,
+                total,
+                user: req.user,
+                error: null,
+                query: req.query.query || ''
+            });
+        } else {
+            res.render('product/index', {
+                products,
+                currentPage: page,
+                totalPages,
+                total,
+                user: req.user,
+                error: null
+            });
+        }
     } catch (error) {
         logger.error('Error fetching products:', { error: error.message });
         res.status(500).render('error', { 
@@ -109,12 +122,18 @@ export const getAddProductForm = async (req, res) => {
             });
         }
 
+        let companies = [];
+        if (req.user.role === 'admin') {
+            companies = await Company.find({ isActive: true }).sort({ name: 1 });
+        }
+
         res.render('product/add', { 
             user: req.user,
             error: null,
             validationErrors: null,
             formData: null,
-            title: 'Add New Product'
+            title: 'Add New Product',
+            companies
         });
     } catch (error) {
         logger.error('Error fetching add product form:', { 
@@ -144,6 +163,7 @@ export const createProduct = async (req, res) => {
                 userId: req.user._id,
                 body: req.body
             });
+
             return res.status(400).render('product/add', {
                 error: 'Please fix the errors below',
                 validationErrors: validation.errors,
@@ -153,19 +173,46 @@ export const createProduct = async (req, res) => {
             });
         }
 
+        let companyId;
+        if (req.user.role === 'admin') {
+            // Find default company for admin
+            const defaultCompany = await Company.findOne({ 
+                name: 'Default Company',
+                isActive: true 
+            });
+
+            if (!defaultCompany) {
+                // Create default company if it doesn't exist
+                const newCompany = new Company({
+                    name: 'Default Company',
+                    email: 'default@company.com',
+                    phone: '0000000000',
+                    isActive: true,
+                    createdBy: req.user._id
+                });
+                await newCompany.save();
+                companyId = newCompany._id;
+            } else {
+                companyId = defaultCompany._id;
+            }
+        } else {
+            companyId = req.user.companyId;
+        }
+
         const existingProduct = await Product.findOne({
             name: req.body.name.trim(),
-            companyId: req.user.companyId,
+            companyId: companyId,
             isActive: true
         });
 
         if (existingProduct) {
             logger.warn('Product with same name exists:', {
                 name: req.body.name,
-                companyId: req.user.companyId
+                companyId: companyId
             });
+
             return res.status(400).render('product/add', {
-                error: 'A product with this name already exists in your company',
+                error: 'A product with this name already exists',
                 formData: req.body,
                 user: req.user,
                 title: 'Add New Product'
@@ -181,7 +228,7 @@ export const createProduct = async (req, res) => {
             taxRate: parseFloat(req.body.taxRate),
             inStock: parseInt(req.body.inStock),
             isActive: req.body.isActive === 'on',
-            companyId: req.user.companyId,
+            companyId: companyId,
             createdBy: req.user._id
         });
         
@@ -202,10 +249,10 @@ export const createProduct = async (req, res) => {
             userId: req.user._id,
             body: req.body
         });
-        
+
         if (error.code === 11000) {
             return res.status(400).render('product/add', {
-                error: 'A product with this name already exists in your company',
+                error: 'A product with this name already exists',
                 formData: req.body,
                 user: req.user,
                 title: 'Add New Product'
@@ -324,7 +371,7 @@ export const updateProduct = async (req, res) => {
             userId: req.user._id
         });
 
-        res.redirect('/product');
+        res.redirect('/products/admin');
     } catch (error) {
         logger.error('Error updating product:', { 
             error: error.message,
@@ -367,7 +414,7 @@ export const deleteProduct = async (req, res) => {
             userId: req.user._id
         });
 
-        res.redirect('/product');
+        res.redirect('/products/admin');
     } catch (error) {
         logger.error('Error deleting product:', { 
             error: error.message,

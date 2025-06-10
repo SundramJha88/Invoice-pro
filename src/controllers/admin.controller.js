@@ -62,28 +62,54 @@ export const getUsers = async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = 10;
         const skip = (page - 1) * limit;
+        const query = req.query.query || '';
 
-        const users = await User.find()
-            .populate('companyId')
+        // Build search query
+        const searchQuery = {
+            isActive: true
+        };
+
+        if (query) {
+            searchQuery.$or = [
+                { name: { $regex: query, $options: 'i' } },
+                { email: { $regex: query, $options: 'i' } }
+            ];
+        }
+
+        // Get total count for pagination
+        const totalUsers = await User.countDocuments(searchQuery);
+        const totalPages = Math.ceil(totalUsers / limit);
+
+        // Get users with pagination and populate company details
+        const users = await User.find(searchQuery)
+            .populate('companyId', 'name')
+            .sort({ createdAt: -1 })
             .skip(skip)
-            .limit(limit)
-            .sort({ createdAt: -1 });
+            .limit(limit);
 
-        const total = await User.countDocuments();
-        const totalPages = Math.ceil(total / limit);
+        // Transform users data to include company name
+        const transformedUsers = users.map(user => ({
+            ...user.toObject(),
+            company: user.companyId ? { name: user.companyId.name } : null
+        }));
 
         res.render('admin/users', {
-            users,
+            users: transformedUsers,
             currentPage: page,
             totalPages,
+            query,
             user: req.user,
-            req: req
+            title: 'Manage Users'
         });
     } catch (error) {
-        logger.error('Error in getUsers:', error);
+        logger.error('Error fetching users:', { 
+            error: error.message,
+            stack: error.stack,
+            userId: req.user._id
+        });
         res.status(500).render('error', { 
-            message: 'Error loading users',
-            error: error.message
+            error: 'Failed to fetch users',
+            user: req.user
         });
     }
 };

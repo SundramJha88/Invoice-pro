@@ -22,10 +22,6 @@ export const auth = async (req, res, next) => {
                 return res.redirect('/auth/login');
             }
 
-            if (user.email === 'admin@invoicepro.com') {
-                user.role = 'admin';
-            }
-
             req.user = user;
             logger.info('User authenticated:', { 
                 userId: user._id,
@@ -64,10 +60,6 @@ export const admin = async (req, res, next) => {
                 message: 'Access denied. Admin privileges required.',
                 error: { status: 403 }
             });
-        }
-
-        if (req.user.email === 'admin@invoicepro.com' && req.user.role !== 'admin') {
-            req.user.role = 'admin';
         }
 
         logger.info('Admin access granted:', { 

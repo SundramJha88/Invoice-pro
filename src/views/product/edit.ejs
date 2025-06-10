@@ -33,7 +33,7 @@
                             </div>
                         <% } %>
 
-                        <form action="/product/<%= product._id %>" method="POST">
+                        <form action="/products/admin/<%= product._id %>" method="POST">
                             <input type="hidden" name="_method" value="PUT">
                             
                             <div class="mb-3">
@@ -91,7 +91,7 @@
 
                             <div class="d-grid gap-2">
                                 <button type="submit" class="btn btn-primary">Update Product</button>
-                                <a href="/product" class="btn btn-secondary">Cancel</a>
+                                <a href="/products/admin" class="btn btn-secondary">Cancel</a>
                             </div>
                         </form>
                     </div>

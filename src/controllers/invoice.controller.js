@@ -6,42 +6,63 @@ import { CreateInvoiceRequest, UpdateInvoiceRequest } from '../requests/invoice.
 export const getAllInvoices = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
+        const limit = 10;
         const skip = (page - 1) * limit;
+        const query = req.query.query || '';
 
-        const query = req.user.role === 'admin' ? {} : { companyId: req.user.companyId };
-        const [invoices, total] = await Promise.all([
-            Invoice.find(query)
+        // Build search query
+        const searchQuery = {};
+        if (req.user.role !== 'admin') {
+            searchQuery.companyId = req.user.companyId;
+        }
+
+        if (query) {
+            searchQuery.$or = [
+                { invoiceNumber: { $regex: query, $options: 'i' } },
+                { 'companyId.name': { $regex: query, $options: 'i' } }
+            ];
+        }
+
+        // Get total count for pagination
+        const totalInvoices = await Invoice.countDocuments(searchQuery);
+        const totalPages = Math.ceil(totalInvoices / limit);
+
+        // Get invoices with pagination and populate company details
+        const invoices = await Invoice.find(searchQuery)
             .populate('companyId', 'name')
-                .populate('createdBy', 'name')
-                .sort({ createdAt: -1 })
+            .populate('createdBy', 'name')
+            .sort({ createdAt: -1 })
             .skip(skip)
-                .limit(limit),
-            Invoice.countDocuments(query)
-        ]);
-
-        const totalPages = Math.ceil(total / limit);
+            .limit(limit);
 
         logger.info('Invoices fetched successfully', { 
             userId: req.user._id,
             role: req.user.role,
             page,
             limit,
-            total
+            total: totalInvoices
         });
 
-        res.render('invoice/index', {
+        // Determine which template to use based on user role
+        const template = req.user.role === 'admin' ? 'admin/invoices' : 'invoice/index';
+
+        res.render(template, {
             invoices,
             currentPage: page,
             totalPages,
-            total,
-            user: req.user
+            query,
+            user: req.user,
+            title: 'Manage Invoices'
         });
     } catch (error) {
-        logger.error('Error fetching invoices:', { error: error.message });
+        logger.error('Error fetching invoices:', { 
+            error: error.message,
+            stack: error.stack,
+            userId: req.user._id
+        });
         res.status(500).render('error', { 
-            message: 'Failed to fetch invoices',
-            error: { status: 500 }
+            error: 'Failed to fetch invoices',
+            user: req.user
         });
     }
 };
@@ -311,57 +332,65 @@ export const deleteInvoice = async (req, res) => {
 
 export const searchInvoices = async (req, res) => {
     try {
-        const { query } = req.query;
+        const query = req.query.query || '';
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
+        const limit = 10;
         const skip = (page - 1) * limit;
 
-        const searchQuery = {
-            $or: [
-                { invoiceNumber: { $regex: query, $options: 'i' } },
-                { 'clientDetails.name': { $regex: query, $options: 'i' } },
-                { 'clientDetails.email': { $regex: query, $options: 'i' } }
-            ]
-        };
-
-        if (req.user.role === 'user') {
+        // Build search query
+        const searchQuery = {};
+        if (req.user.role !== 'admin') {
             searchQuery.companyId = req.user.companyId;
         }
 
-        const [invoices, total] = await Promise.all([
-            Invoice.find(searchQuery)
-                .populate('companyId', 'name')
-                .populate('createdBy', 'name')
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit),
-            Invoice.countDocuments(searchQuery)
-        ]);
+        if (query) {
+            searchQuery.$or = [
+                { invoiceNumber: { $regex: query, $options: 'i' } },
+                { 'companyId.name': { $regex: query, $options: 'i' } }
+            ];
+        }
 
-        const totalPages = Math.ceil(total / limit);
+        // Get total count for pagination
+        const totalInvoices = await Invoice.countDocuments(searchQuery);
+        const totalPages = Math.ceil(totalInvoices / limit);
 
-        logger.info('Invoice search completed:', { 
-            query,
+        // Get invoices with pagination and populate company details
+        const invoices = await Invoice.find(searchQuery)
+            .populate('companyId', 'name')
+            .populate('createdBy', 'name')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        logger.info('Invoices search completed:', { 
             userId: req.user._id,
-            results: invoices.length
+            role: req.user.role,
+            query,
+            page,
+            limit,
+            total: totalInvoices
         });
 
-        res.render('invoice/index', {
+        // Determine which template to use based on user role
+        const template = req.user.role === 'admin' ? 'admin/invoices' : 'invoice/index';
+
+        res.render(template, {
             invoices,
             currentPage: page,
             totalPages,
-            total,
-            searchQuery: query,
-            user: req.user
+            query,
+            user: req.user,
+            title: 'Search Invoices'
         });
     } catch (error) {
         logger.error('Error searching invoices:', { 
             error: error.message,
-            query: req.query.query
+            stack: error.stack,
+            userId: req.user._id
         });
         res.status(500).render('error', { 
-            message: 'Failed to search invoices',
-            error: { status: 500 }
+            error: 'Failed to search invoices',
+            user: req.user
         });
     }
 };
@@ -391,44 +420,53 @@ export const getProductsByCompany = async (req, res) => {
 export const getCompanyInvoices = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
+        const limit = 10;
         const skip = (page - 1) * limit;
 
-        const query = { companyId: req.params.companyId };
-        const [invoices, total] = await Promise.all([
-            Invoice.find(query)
-                .populate('companyId', 'name')
-                .populate('createdBy', 'name')
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit),
-            Invoice.countDocuments(query)
-        ]);
-
-        const totalPages = Math.ceil(total / limit);
-
-        logger.info('Company invoices fetched successfully', { 
-            companyId: req.params.companyId,
-            page,
-            limit,
-            total
+        // Get total count of invoices
+        const totalInvoices = await Invoice.countDocuments({ companyId: req.user.companyId });
+        
+        // Get counts for different statuses
+        const paidInvoices = await Invoice.countDocuments({ 
+            companyId: req.user.companyId,
+            status: 'paid'
         });
+        
+        const pendingInvoices = await Invoice.countDocuments({ 
+            companyId: req.user.companyId,
+            status: 'pending'
+        });
+        
+        const overdueInvoices = await Invoice.countDocuments({ 
+            companyId: req.user.companyId,
+            status: 'overdue'
+        });
+
+        // Get paginated invoices
+        const invoices = await Invoice.find({ companyId: req.user.companyId })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .populate('companyId', 'name');
+
+        const totalPages = Math.ceil(totalInvoices / limit);
 
         res.render('invoice/index', {
             invoices,
             currentPage: page,
             totalPages,
-            total,
+            totalInvoices,
+            paidInvoices,
+            pendingInvoices,
+            overdueInvoices,
+            query: req.query.query || '',
             user: req.user
         });
     } catch (error) {
-        logger.error('Error fetching company invoices:', { 
-            error: error.message,
-            companyId: req.params.companyId
-        });
+        console.error('Error in getCompanyInvoices:', error);
         res.status(500).render('error', { 
-            message: 'Failed to fetch company invoices',
-            error: { status: 500 }
+            message: 'Error fetching invoices',
+            error: process.env.NODE_ENV === 'development' ? error : {}
         });
     }
 };

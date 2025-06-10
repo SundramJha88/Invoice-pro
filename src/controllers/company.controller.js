@@ -1,45 +1,63 @@
 import Company from '../models/company.model.js';
 import logger from '../utils/logger.js';
 import { validateCompany } from '../requests/company.request.js';
+import User from '../models/user.model.js';
 
 export const getAllCompanies = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
+        const limit = 10;
         const skip = (page - 1) * limit;
+        const query = req.query.query || '';
 
-        const query = req.user.role === 'admin' ? {} : { _id: req.user.companyId };
-        const [companies, total] = await Promise.all([
-            Company.find(query)
-                .populate('createdBy', 'name')
-                .sort({ createdAt: -1 })
+        // Build search query
+        const searchQuery = {
+            isActive: true
+        };
+
+        if (query) {
+            searchQuery.$or = [
+                { name: { $regex: query, $options: 'i' } },
+                { email: { $regex: query, $options: 'i' } }
+            ];
+        }
+
+        // Get total count for pagination
+        const totalCompanies = await Company.countDocuments(searchQuery);
+        const totalPages = Math.ceil(totalCompanies / limit);
+
+        // Get companies with pagination
+        const companies = await Company.find(searchQuery)
+            .sort({ createdAt: -1 })
             .skip(skip)
-                .limit(limit),
-            Company.countDocuments(query)
-        ]);
+            .limit(limit);
 
-        const totalPages = Math.ceil(total / limit);
+        // Get user count for each company
+        const companiesWithUserCount = await Promise.all(companies.map(async (company) => {
+            const userCount = await User.countDocuments({ companyId: company._id });
+            return {
+                ...company.toObject(),
+                userCount
+            };
+        }));
 
-        logger.info('Companies fetched successfully', { 
-            userId: req.user._id,
-            role: req.user.role,
-            page,
-            limit,
-            total
-        });
-
-        res.render('company/index', {
-            companies,
+        res.render('admin/companies', {
+            companies: companiesWithUserCount,
             currentPage: page,
             totalPages,
-            total,
-            user: req.user
+            query,
+            user: req.user,
+            title: 'Manage Companies'
         });
     } catch (error) {
-        logger.error('Error fetching companies:', { error: error.message });
+        logger.error('Error fetching companies:', { 
+            error: error.message,
+            stack: error.stack,
+            userId: req.user._id
+        });
         res.status(500).render('error', { 
-            message: 'Failed to fetch companies',
-            error: { status: 500 }
+            error: 'Failed to fetch companies',
+            user: req.user
         });
     }
 };
