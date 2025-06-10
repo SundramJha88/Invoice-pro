@@ -3,6 +3,7 @@ import User from '../models/user.model.js';
 import Product from '../models/product.model.js';
 import Invoice from '../models/invoice.model.js';
 import logger from '../utils/logger.js';
+import bcrypt from 'bcrypt';
 
 export const getAdminDashboard = async (req, res) => {
     try {
@@ -172,5 +173,75 @@ export const deleteUser = async (req, res) => {
     } catch (error) {
         logger.error('Error deleting user:', error);
         res.status(500).json({ message: 'Error deleting user' });
+    }
+};
+
+export const getProfile = async (req, res) => {
+    try {
+        res.render('admin/profile', {
+            user: req.user,
+            error: req.query.error,
+            success: req.query.success
+        });
+    } catch (error) {
+        console.error('Error in getProfile:', error);
+        res.status(500).render('error', { 
+            message: 'Error loading profile',
+            error: process.env.NODE_ENV === 'development' ? error : {}
+        });
+    }
+};
+
+export const updateProfile = async (req, res) => {
+    try {
+        const { name, phone } = req.body;
+        const user = await User.findById(req.user._id);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.name = name;
+        user.phone = phone;
+
+        // If the user is an admin, set default values for company fields
+        if (user.role === 'admin') {
+            user.companyName = user.companyName || 'Admin Company';
+            user.companyEmail = user.companyEmail || 'admin@invoicepro.com';
+            user.companyPhone = user.companyPhone || '1234567890';
+            user.companyAddress = user.companyAddress || 'Admin Address';
+        }
+
+        await user.save();
+
+        res.redirect('/admin/profile?success=Profile updated successfully');
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+export const updatePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const user = await User.findById(req.user._id);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Current password is incorrect' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+        await user.save();
+
+        res.redirect('/admin/profile?success=Password updated successfully');
+    } catch (error) {
+        console.error('Error updating password:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 }; 

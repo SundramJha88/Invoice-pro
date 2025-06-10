@@ -4,7 +4,10 @@ import {
     getAdminDashboard, 
     getUsers, 
     updateUser, 
-    deleteUser 
+    deleteUser,
+    getProfile,
+    updateProfile,
+    updatePassword
 } from '../controllers/admin.controller.js';
 import User from '../models/user.model.js';
 import bcrypt from 'bcryptjs';
@@ -72,5 +75,10 @@ router.get('/', getAdminDashboard);
 router.get('/users', getUsers);
 router.put('/users/:id', updateUser);
 router.delete('/users/:id', deleteUser);
+
+// Profile routes
+router.get('/profile', auth, admin, getProfile);
+router.post('/profile', auth, admin, updateProfile);
+router.post('/profile/password', auth, admin, updatePassword);
 
 export default router; 

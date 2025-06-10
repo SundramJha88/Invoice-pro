@@ -60,10 +60,11 @@ app.use('/admin', adminRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-    logger.error('Application error:', err);
-    res.status(500).render('error', {
-        message: 'Something went wrong',
-        error: process.env.NODE_ENV === 'development' ? err : {}
+    console.error(err.stack);
+    res.status(500).render('error', { 
+        message: 'Something went wrong!',
+        error: process.env.NODE_ENV === 'development' ? err : {},
+        user: req.user
     });
 });
 

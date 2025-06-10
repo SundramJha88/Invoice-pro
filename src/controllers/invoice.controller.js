@@ -78,7 +78,8 @@ export const getInvoiceById = async (req, res) => {
             logger.warn('Invoice not found:', { invoiceId: req.params.id });
             return res.status(404).render('error', { 
                 message: 'Invoice not found',
-                error: { status: 404 }
+                error: { status: 404 },
+                user: req.user
             });
         }
 
@@ -89,7 +90,8 @@ export const getInvoiceById = async (req, res) => {
             });
             return res.status(403).render('error', { 
                 message: 'Access denied',
-                error: { status: 403 }
+                error: { status: 403 },
+                user: req.user
             });
         }
 
@@ -106,7 +108,8 @@ export const getInvoiceById = async (req, res) => {
         });
         res.status(500).render('error', { 
             message: 'Failed to fetch invoice',
-            error: { status: 500 }
+            error: { status: 500 },
+            user: req.user
         });
     }
 };
@@ -118,20 +121,27 @@ export const getAddInvoiceForm = async (req, res) => {
             isActive: true 
         }).select('name price taxRate inStock');
 
+        const companies = await Product.find({ 
+            isActive: true 
+        }).select('name');
+
         logger.info('Add invoice form fetched:', { 
             userId: req.user._id,
-            productsCount: products.length
+            productsCount: products.length,
+            companiesCount: companies.length
         });
 
         res.render('invoice/add', { 
             user: req.user,
-            products 
+            products,
+            companies
         });
     } catch (error) {
         logger.error('Error fetching add invoice form:', { error: error.message });
         res.status(500).render('error', { 
             message: 'Failed to load invoice form',
-            error: { status: 500 }
+            error: { status: 500 },
+            user: req.user
         });
     }
 };
@@ -189,7 +199,8 @@ export const getEditInvoiceForm = async (req, res) => {
             logger.warn('Invoice not found:', { invoiceId: req.params.id });
             return res.status(404).render('error', { 
                 message: 'Invoice not found',
-                error: { status: 404 }
+                error: { status: 404 },
+                user: req.user
             });
         }
 
@@ -200,7 +211,8 @@ export const getEditInvoiceForm = async (req, res) => {
             });
             return res.status(403).render('error', { 
                 message: 'Access denied',
-                error: { status: 403 }
+                error: { status: 403 },
+                user: req.user
             });
         }
 
@@ -226,7 +238,8 @@ export const getEditInvoiceForm = async (req, res) => {
         });
         res.status(500).render('error', { 
             message: 'Failed to load edit form',
-            error: { status: 500 }
+            error: { status: 500 },
+            user: req.user
         });
     }
 };
@@ -251,7 +264,8 @@ export const updateInvoice = async (req, res) => {
             logger.warn('Invoice not found:', { invoiceId: req.params.id });
             return res.status(404).render('error', { 
                 message: 'Invoice not found',
-                error: { status: 404 }
+                error: { status: 404 },
+                user: req.user
             });
         }
 
@@ -262,7 +276,8 @@ export const updateInvoice = async (req, res) => {
             });
             return res.status(403).render('error', { 
                 message: 'Access denied',
-                error: { status: 403 }
+                error: { status: 403 },
+                user: req.user
             });
         }
 
@@ -295,7 +310,8 @@ export const deleteInvoice = async (req, res) => {
             logger.warn('Invoice not found:', { invoiceId: req.params.id });
             return res.status(404).render('error', { 
                 message: 'Invoice not found',
-                error: { status: 404 }
+                error: { status: 404 },
+                user: req.user
             });
         }
 
@@ -306,7 +322,8 @@ export const deleteInvoice = async (req, res) => {
             });
             return res.status(403).render('error', { 
                 message: 'Access denied',
-                error: { status: 403 }
+                error: { status: 403 },
+                user: req.user
             });
         }
 
@@ -325,7 +342,8 @@ export const deleteInvoice = async (req, res) => {
         });
         res.status(500).render('error', { 
             message: 'Failed to delete invoice',
-            error: { status: 500 }
+            error: { status: 500 },
+            user: req.user
         });
     }
 };
@@ -466,7 +484,8 @@ export const getCompanyInvoices = async (req, res) => {
         console.error('Error in getCompanyInvoices:', error);
         res.status(500).render('error', { 
             message: 'Error fetching invoices',
-            error: process.env.NODE_ENV === 'development' ? error : {}
+            error: process.env.NODE_ENV === 'development' ? error : {},
+            user: req.user
         });
     }
 };
